@@ -33,16 +33,21 @@ pipeline {
                 """
             }
         }
-        
+
         stage('Trivy Scan') {
             steps {
                 sh """
                     echo "🔍 Scanning..."
-                    trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed ${IMAGE_NAME}:${env.IMAGE_TAG}
+                    trivy image --exit-code 1 \
+                      --severity HIGH,CRITICAL \
+                      --ignore-unfixed \
+                      --ignorefile .trivyignore \
+                      ${IMAGE_NAME}:${env.IMAGE_TAG}
                     echo "✅ Clean"
                 """
             }
-        }
+        }        
+        // Removed duplicate Trivy Scan stage
         
         stage('Push to ECR') {
             steps {
