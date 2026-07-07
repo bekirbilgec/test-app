@@ -64,10 +64,22 @@ pipeline {
             steps {
                 sh """
                     echo "🚀 Deploying..."
+                    
+                    kubectl create secret docker-registry ecr-secret \\
+                      --docker-server=${ECR_REGISTRY} \\
+                      --docker-username=AWS \\
+                      --docker-password=\$(aws ecr get-login-password --region ${AWS_REGION}) \\
+                      --dry-run=client -o yaml | kubectl apply -f -
+                    
                     kubectl delete deployment ${IMAGE_NAME} --ignore-not-found
-                    kubectl create deployment ${IMAGE_NAME} \
-                      --image=${ECR_REGISTRY}/${IMAGE_NAME}:${env.IMAGE_TAG} \
-                      --port=8000
+                    
+                    kubectl create deployment ${IMAGE_NAME} \\
+                      --image=${ECR_REGISTRY}/${IMAGE_NAME}:${env.IMAGE_TAG} \\
+                      --port=8000 \\
+                      --dry-run=client -o yaml | \
+                      kubectl patch --local -f - -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"ecr-secret"}]}}}}' -o yaml | \
+                      kubectl apply -f -
+                    
                     kubectl rollout status deployment/${IMAGE_NAME} --timeout=120s
                 """
             }
